@@ -4,3 +4,7 @@ db = SQLAlchemy()
 
 
 # Models
+
+# Item
+# User
+# Category

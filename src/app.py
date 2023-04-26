@@ -26,3 +26,9 @@ def failure_response(message, code=404):
 
 
 # routes
+
+# Authentication routes (ie. sign up/log in)
+# Get items for user with id=1 (GET /api/items/1/)
+# Add item for user with id=1 (GET/api/items/1/)
+#
+
