@@ -1,5 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
 
+import datetime
+import hashlib
+import os
+
+import bcrypt
+
 db = SQLAlchemy()
 
 association_table = db.Table(
@@ -18,10 +24,12 @@ class Item(db.Model):
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
+    likes = db.Column(db.Integer, nullable=False) # likes to help with popular sorting
     dates = db.relationship("Date", cascade="delete")
     notes = db.relationship("Note", cascade="delete")
     # photo = db.relationship()
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
+    # public = db.relationship(db.Boolean, nullable=False), lets user set public or private items
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
@@ -101,9 +109,31 @@ class Date(db.Model):
             "date": self.date,
             "item_id": self.item_id
         }
+    
 
+class User(db.Model):
+    """
+    Model for user
+    """
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.String, nullable=False, unique=True)
+    password_digest = db.Column(db.String, nullable=False)
+
+    session_token = db.Column(db.String, nullable=False, unique=True)
+    session_expiration = db.Column(db.DateTime, nullable=False)
+    update_token = db.Column(db.String, nullable=False, unique=True)
+
+    def __init__(self, **kwargs):
+        """
+        Initializes a User object
+        """
+        self.email = kwargs.get("email")
+        self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"), bcrypt.gensalt(rounds=13)) # encrypts passowrd by hashing
+        self.renew_session()
 
 # Item
 # User
 # Category
+# Photo
 # dates -> to have multiple dates for an event, maybe a one-to-many type thing
