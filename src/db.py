@@ -27,7 +27,7 @@ class Item(db.Model):
     name = db.Column(db.String, nullable=False)
     likes = db.Column(db.Integer, nullable=False) # likes to help with popular sorting
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
-    end_date = db.Column(db.DateTime(timezone=True), nullable=True)
+    end_date = db.Column(db.DateTime(timezone=True), nullable=True) # null if no end date, need to find a way to do recurring events if have time, but don't really need
     notes = db.relationship("Note", cascade="delete")
     # photo = db.relationship()
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
