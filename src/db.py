@@ -23,9 +23,11 @@ class Item(db.Model):
 
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False) # maybe make many-to-many to add multiple users to an item, i.e. users, if we have time
     name = db.Column(db.String, nullable=False)
     likes = db.Column(db.Integer, nullable=False) # likes to help with popular sorting
-    dates = db.relationship("Date", cascade="delete")
+    start_date = db.Column(db.DateTime(timezone=True), nullable=False)
+    end_date = db.Column(db.DateTime(timezone=True), nullable=True)
     notes = db.relationship("Note", cascade="delete")
     # photo = db.relationship()
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
@@ -40,6 +42,7 @@ class Item(db.Model):
         """
         return {
             "id": self.id,
+            "user_id": self.user_id,
             "name": self.name,
             "dates": [d.serialize() for d in self.dates],
             "notes": [n.serialize() for n in self.notes],
@@ -85,32 +88,6 @@ class Category(db.Model):
         self.name = kwargs.get("name", "")
         self.color = kwargs.get("color", "")
 
-# note sure yet how to handle dates but I made the model in case we need it
-class Date(db.Model):
-    """
-    Model for date
-    """
-
-    __tablename__ = "dates"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    date = db.Column(db.String, nullable=False)
-    item_id = item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
-
-    def __init__(self, **kwargs):
-        self.date = kwargs.get("date", "")
-        self.item_id = kwargs.get("item_id")
-
-    def serialize(self):
-        """
-        Serialize an instance of Date
-        """
-        return {
-            "id": self.id,
-            "date": self.date,
-            "item_id": self.item_id
-        }
-    
-
 class User(db.Model):
     """
     Model for user
@@ -124,16 +101,25 @@ class User(db.Model):
     session_expiration = db.Column(db.DateTime, nullable=False)
     update_token = db.Column(db.String, nullable=False, unique=True)
 
+    items = db.relationship("Item", cascade="delete")
+
     def __init__(self, **kwargs):
         """
-        Initializes a User object
+        Initialize an instance of User
         """
         self.email = kwargs.get("email")
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"), bcrypt.gensalt(rounds=13)) # encrypts passowrd by hashing
         self.renew_session()
 
+class Photo(db.Model):
+    """
+    Model for photo
+    """
+    pass
+
+
 # Item
-# User
+# User -> integrate into app more, add poster field in item
 # Category
 # Photo
-# dates -> to have multiple dates for an event, maybe a one-to-many type thing
+# look up crontab/cronjob
