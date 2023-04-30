@@ -34,7 +34,12 @@ class Item(db.Model):
     # public = db.relationship(db.Boolean, nullable=False), lets user set public or private items
 
     def __init__(self, **kwargs):
-        self.name = kwargs.get('name')
+        self.user_id = kwargs.get("user_id")
+        self.likes = 0
+        self.name = kwargs.get("name", "")
+        self.start_date = kwargs.get("start_date")
+        self.end_date = kwargs.get("end_date")
+
 
     def serialize(self):
         """
@@ -44,9 +49,23 @@ class Item(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "name": self.name,
-            "dates": [d.serialize() for d in self.dates],
+            "likes": self.likes,
+            "dates": f"{self.start_date} - {self.end_date}",
             "notes": [n.serialize() for n in self.notes],
-            "catergories": [c.serialize() for c in self.categories]
+            "catergories": [c.simple_serialize() for c in self.categories]
+        }
+    
+    def simple_serialize(self):
+        """
+        Serialize an instance of Item without catergories
+        """
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "likes": self.likes,
+            "dates": f"{self.start_date} - {self.end_date}",
+            "notes": [n.serialize() for n in self.notes]
         }
 
 
@@ -81,12 +100,33 @@ class Category(db.Model):
     __tablename__ = "categories"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
-    color = db.Column(db.String, nullable=False)
+    type = db.Column(db.String, nullable=False)
     items = db.relationship("Item", secondary=association_table, back_populates='categories')
 
     def __init__(self, **kwargs):
         self.name = kwargs.get("name", "")
-        self.color = kwargs.get("color", "")
+        self.type = kwargs.get("type", "")
+
+    def serialize(self):
+        """
+        Serialize an instance of Catergory
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "items": [i.simple_serialize() for i in self.items]
+        }
+
+    def simple_serialize(self):
+        """
+        Serialize an instance of Catergory without items
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type
+        }
 
 class User(db.Model):
     """
@@ -110,6 +150,52 @@ class User(db.Model):
         self.email = kwargs.get("email")
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"), bcrypt.gensalt(rounds=13)) # encrypts passowrd by hashing
         self.renew_session()
+
+    # not sure if we should serialize username/password
+    def serialize(self):
+        """
+        Serialize and instance of User
+        """
+        return {
+            "id": self.id,
+            "items": [i.serialize() for i in self.items]
+        }
+    
+
+    def _urlsafe_base_64(self):
+        """
+        Randomly generates hashed tokens (used for session/update tokens)
+        """
+        return hashlib.sha1(os.urandom(64)).hexdigest()
+
+    def renew_session(self):
+        """
+        Renews the sessions, i.e.
+        1. Creates a new session token
+        2. Sets the expiration time of the session to be a day from now
+        3. Creates a new update token
+        """
+        self.session_token = self._urlsafe_base_64()
+        self.session_expiration = datetime.datetime.now() + datetime.timedelta(days=1) # datetime.datetime.now() gives current time, datetime.timedelta(days=1) gives length of a day
+        self.update_token = self._urlsafe_base_64()
+
+    def verify_password(self, password):
+        """
+        Verifies the password of a user
+        """
+        return bcrypt.checkpw(password.encode("utf8"), self.password_digest)
+
+    def verify_session_token(self, session_token):
+        """
+        Verifies the session token of a user
+        """
+        return session_token == self.session_token and datetime.datetime.now() < self.session_expiration
+
+    def verify_update_token(self, update_token):
+        """
+        Verifies the update token of a user
+        """
+        return update_token == self.update_token
 
 class Photo(db.Model):
     """
