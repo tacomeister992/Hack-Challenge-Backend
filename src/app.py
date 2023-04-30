@@ -1,5 +1,11 @@
 from db import db
 # from db import ### MODELS
+from db import User
+from db import Photo
+from db import Item
+from db import Note
+from db import Category
+
 from flask import Flask, request
 import json
 import os
@@ -31,4 +37,8 @@ def failure_response(message, code=404):
 # Get items for user with id=1 (GET /api/items/1/)
 # Add item for user with id=1 (GET/api/items/1/)
 #
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 

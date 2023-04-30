@@ -35,7 +35,6 @@ association_table2 = db.Table(
     db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
 )
 
-
 # Models
 class Item(db.Model):
     """
@@ -50,16 +49,19 @@ class Item(db.Model):
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
     end_date = db.Column(db.DateTime(timezone=True), nullable=True) # null if no end date, need to find a way to do recurring events if have time, but don't really need
     notes = db.relationship("Note", cascade="delete")
-    photo = db.relationship("Photo", secondary=association_table2, back_populates="items")
+    photos = db.relationship("Photo", secondary=association_table2, back_populates="items")
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
-    # public = db.Column(db.Boolean, nullable=False), lets user set public or private items
+    # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
     def __init__(self, **kwargs):
         self.user_id = kwargs.get("user_id")
         self.likes = 0
         self.name = kwargs.get("name", "")
-        self.start_date = kwargs.get("start_date")
-        self.end_date = kwargs.get("end_date")
+        start = kwargs.get("start_date")
+        end = kwargs.get("end_date")
+
+        self.start_date = datetime.strptime(start, '%m/%d/%y %H:%M:%S')
+        self.end_date = datetime.strptime(end, '%m/%d/%y %H:%M:%S')
 
 
     def serialize(self):
@@ -78,7 +80,7 @@ class Item(db.Model):
     
     def simple_serialize(self):
         """
-        Serialize an instance of Item without catergories
+        Serialize an instance of Item without catergories or photos
         """
         return {
             "id": self.id,
@@ -230,6 +232,8 @@ class Photo(db.Model):
     width = db.Column(db.Integer, nullable=False)
     height = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
+
+    items = db.relationship("Item", secondary=association_table2, back_populates="photos")
 
     def __init__(self, **kwargs):
         self.create(kwargs.get("image_data"))
