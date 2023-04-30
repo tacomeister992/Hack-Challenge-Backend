@@ -10,8 +10,14 @@ db = SQLAlchemy()
 
 association_table = db.Table(
     "association", db.Model.metadata,
-    db.Column("item_id", db.Integer, db.ForeignKey("task.id")),
-    db.Column("category_id", db.Integer, db.ForeignKey("category.id"))
+    db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
+    db.Column("category_id", db.Integer, db.ForeignKey("categories.id"))
+)
+
+association_table2 = db.Table(
+    "association2", db.metadata,
+    db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
+    db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
 )
 
 
@@ -29,9 +35,9 @@ class Item(db.Model):
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
     end_date = db.Column(db.DateTime(timezone=True), nullable=True) # null if no end date, need to find a way to do recurring events if have time, but don't really need
     notes = db.relationship("Note", cascade="delete")
-    # photo = db.relationship()
+    photo = db.relationship("Photo", secondary=association_table2, back_populates="items")
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
-    # public = db.relationship(db.Boolean, nullable=False), lets user set public or private items
+    # public = db.Column(db.Boolean, nullable=False), lets user set public or private items
 
     def __init__(self, **kwargs):
         self.user_id = kwargs.get("user_id")
@@ -204,8 +210,9 @@ class Photo(db.Model):
     pass
 
 
+
 # Item
-# User -> integrate into app more, add poster field in item
+# User -> integrate into app, add poster field in item
 # Category
 # Photo
 # look up crontab/cronjob
