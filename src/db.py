@@ -35,6 +35,7 @@ association_table2 = db.Table(
     db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
 )
 
+
 # Models
 class Item(db.Model):
     """
@@ -43,14 +44,17 @@ class Item(db.Model):
 
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False) # maybe make many-to-many to add multiple users to an item, i.e. users, if we have time
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"),
+                        nullable=False)  # maybe make many-to-many to add multiple users to an item, i.e. users, if we have time
     name = db.Column(db.String, nullable=False)
-    likes = db.Column(db.Integer, nullable=False) # likes to help with popular sorting
+    likes = db.Column(db.Integer, nullable=False)  # likes to help with popular sorting
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
-    end_date = db.Column(db.DateTime(timezone=True), nullable=True) # null if no end date, need to find a way to do recurring events if have time, but don't really need
+    end_date = db.Column(db.DateTime(timezone=True),
+                         nullable=True)  # null if no end date, need to find a way to do recurring events if have time, but don't really need
     notes = db.relationship("Note", cascade="delete")
     photos = db.relationship("Photo", secondary=association_table2, back_populates="items")
     categories = db.relationship("Category", secondary=association_table, back_populates='items')
+
     # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
     def __init__(self, **kwargs):
@@ -62,7 +66,6 @@ class Item(db.Model):
 
         self.start_date = datetime.strptime(start, '%m/%d/%y %H:%M:%S')
         self.end_date = datetime.strptime(end, '%m/%d/%y %H:%M:%S')
-
 
     def serialize(self):
         """
@@ -77,7 +80,7 @@ class Item(db.Model):
             "notes": [n.serialize() for n in self.notes],
             "catergories": [c.simple_serialize() for c in self.categories]
         }
-    
+
     def simple_serialize(self):
         """
         Serialize an instance of Item without catergories or photos
@@ -151,6 +154,7 @@ class Category(db.Model):
             "type": self.type
         }
 
+
 class User(db.Model):
     """
     Model for user
@@ -171,7 +175,8 @@ class User(db.Model):
         Initialize an instance of User
         """
         self.email = kwargs.get("email")
-        self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"), bcrypt.gensalt(rounds=13)) # encrypts passowrd by hashing
+        self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"),
+                                             bcrypt.gensalt(rounds=13))  # encrypts passowrd by hashing
         self.renew_session()
 
     # not sure if we should serialize username/password but I'm guessing prob not for security reasons
@@ -183,7 +188,6 @@ class User(db.Model):
             "id": self.id,
             "items": [i.serialize() for i in self.items]
         }
-    
 
     def _urlsafe_base_64(self):
         """
@@ -199,7 +203,8 @@ class User(db.Model):
         3. Creates a new update token
         """
         self.session_token = self._urlsafe_base_64()
-        self.session_expiration = datetime.datetime.now() + datetime.timedelta(days=1) # datetime.datetime.now() gives current time, datetime.timedelta(days=1) gives length of a day
+        self.session_expiration = datetime.datetime.now() + datetime.timedelta(
+            days=1)  # datetime.datetime.now() gives current time, datetime.timedelta(days=1) gives length of a day
         self.update_token = self._urlsafe_base_64()
 
     def verify_password(self, password):
@@ -219,6 +224,7 @@ class User(db.Model):
         Verifies the update token of a user
         """
         return update_token == self.update_token
+
 
 class Photo(db.Model):
     """
@@ -266,10 +272,10 @@ class Photo(db.Model):
 
             if ext not in EXTENSIONS:
                 raise Exception(f"Extension {ext} not supported")
-            
+
             salt = "".join(
                 random.SystemRandom().choice(
-                string.ascii_uppercase + string.digits
+                    string.ascii_uppercase + string.digits
                 )
                 for _ in range(16)
             )
@@ -311,8 +317,6 @@ class Photo(db.Model):
 
         except Exception as e:
             print(f"Error while uploading image: {e}")
-
-
 
 # Item
 # User -> integrate into app, add poster field in item
