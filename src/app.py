@@ -184,8 +184,8 @@ def create_item():
     return success_response(item.serialize(), 201)
 
 
-@app.route('/items/{}/like/', methods=['POST'])
-def like_item():
+@app.route('/items/<int:item_id>/like/', methods=['POST'])
+def like_item(item_id):
     """
     Endpoint for a user liking an Item
     """
