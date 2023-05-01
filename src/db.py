@@ -174,7 +174,7 @@ class User(db.Model):
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"), bcrypt.gensalt(rounds=13)) # encrypts passowrd by hashing
         self.renew_session()
 
-    # not sure if we should serialize username/password
+    # not sure if we should serialize username/password but I'm guessing prob not for security reasons
     def serialize(self):
         """
         Serialize and instance of User
@@ -237,6 +237,21 @@ class Photo(db.Model):
 
     def __init__(self, **kwargs):
         self.create(kwargs.get("image_data"))
+
+    # not sure if necessary
+    def serialize(self):
+        """
+        Serialize and instance of Photo
+        """
+        return {
+            "id": self.id,
+            "base_url": self.base_url,
+            "salt": self.salt,
+            "extension": self.extension,
+            "width": self.width,
+            "height": self.height,
+            "created_at": self.created_at
+        }
 
     def create(self, image_data):
         """
