@@ -31,6 +31,7 @@ def failure_response(message, code=404):
     return json.dumps({"error": message}), code
 
 
+
 # routes
 
 # Authentication routes (ie. sign up/log in)
