@@ -13,6 +13,7 @@ from PIL import Image
 import random
 import re
 import string
+from datetime import datetime
 
 import bcrypt
 
@@ -65,7 +66,8 @@ class Item(db.Model):
         end = kwargs.get("end_date")
 
         self.start_date = datetime.strptime(start, '%m/%d/%y %H:%M:%S')
-        self.end_date = datetime.strptime(end, '%m/%d/%y %H:%M:%S')
+        if end:
+            self.end_date = datetime.strptime(end, '%m/%d/%y %H:%M:%S')
 
     def serialize(self):
         """
@@ -83,7 +85,7 @@ class Item(db.Model):
 
     def simple_serialize(self):
         """
-        Serialize an instance of Item without catergories or photos
+        Serialize an instance of Item without categories or photos
         """
         return {
             "id": self.id,

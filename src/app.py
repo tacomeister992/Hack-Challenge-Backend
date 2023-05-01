@@ -1,5 +1,4 @@
 from db import db
-# from db import ### MODELS
 from db import User
 from db import Photo
 from db import Item
@@ -11,6 +10,7 @@ import users_dao
 from flask import Flask, request
 import json
 import os
+import datetime
 
 app = Flask(__name__)
 db_filename = "bucket.db"
@@ -117,17 +117,34 @@ def update_session():
 
 
 @app.route('/logout/', methods=['POST'])
-def login():
+def logout():
     """
     Endpoint for logging out a user
     """
-    pass
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token, 400)
+
+    user = users_dao.get_user_by_session_token(session_token)
+    if user is None or user.verify_session_token(session_token):
+        return failure_response('Invalid session', 401)
+
+    user.session_expiration = datetime.datetime.now()
+    db.session.commit()
+    return success_response({'message': 'Successful logout'})
 
 
+# App routes
 @app.route('/items/')
-def get_items_from_user():
+def get_all_items():
+    items = [i.serialize() for i in Item.query.all()]
+    return success_response({'items': items})
+
+
+@app.route('/user/items/')
+def get_items_of_user():
     """
-    Endpoint for getting the items from a user
+    Endpoint for getting the items of a user
     """
     success, session_token = extract_token(request)
     if not success:
@@ -142,9 +159,29 @@ def get_items_from_user():
     return success_response(items)
 
 
-# App routes
+@app.route('/user/items/', methods=['POST'])
+def create_item():
+    """
+    Endpoint for creating an item for a user
+    """
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token, 400)
 
+    user = users_dao.get_user_by_session_token(session_token)
+    if user is None or user.verify_session_token(session_token):
+        return failure_response('Invalid session', 401)
 
+    body = json.loads(request.data)
+    name = body.get('name')
+    start_date = body.get('start_date')
+    end_date = body.get('end_date')
+
+    item = Item(user_id=user.id, name=name, start_date=start_date, end_date=end_date)
+    db.session.add(item)
+    db.session.commit()
+
+    return success_response(item.serialize(), 201)
 
 
 # Authentication routes (ie. sign up/log in)
