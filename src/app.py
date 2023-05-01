@@ -151,7 +151,7 @@ def get_items_of_user():
         return failure_response(session_token, 400)
 
     user = users_dao.get_user_by_session_token(session_token)
-    if user is None or user.verify_session_token(session_token):
+    if user is None or not user.verify_session_token(session_token):
         return failure_response('Invalid session', 401)
 
     items = user.serialize()
@@ -169,7 +169,7 @@ def create_item():
         return failure_response(session_token, 400)
 
     user = users_dao.get_user_by_session_token(session_token)
-    if user is None or user.verify_session_token(session_token):
+    if user is None or not user.verify_session_token(session_token):
         return failure_response('Invalid session', 401)
 
     body = json.loads(request.data)
@@ -182,6 +182,15 @@ def create_item():
     db.session.commit()
 
     return success_response(item.serialize(), 201)
+
+
+@app.route('/items/{}/like/', methods=['POST'])
+def like_item():
+    """
+    Endpoint for a user liking an Item
+    """
+    pass
+    # TODO - How should we implement this so that a user can only like an item once?
 
 
 # Authentication routes (ie. sign up/log in)

@@ -5,7 +5,7 @@ import hashlib
 import os
 
 import base64
-import boto
+# import boto
 import io
 from io import BytesIO
 from mimetypes import guess_extension, guess_type
@@ -13,7 +13,7 @@ from PIL import Image
 import random
 import re
 import string
-from datetime import datetime
+import datetime
 
 import bcrypt
 
@@ -65,9 +65,9 @@ class Item(db.Model):
         start = kwargs.get("start_date")
         end = kwargs.get("end_date")
 
-        self.start_date = datetime.strptime(start, '%m/%d/%y %H:%M:%S')
+        self.start_date = datetime.datetime.strptime(start, '%m/%d/%y %H:%M:%S')
         if end:
-            self.end_date = datetime.strptime(end, '%m/%d/%y %H:%M:%S')
+            self.end_date = datetime.datetime.strptime(end, '%m/%d/%y %H:%M:%S')
 
     def serialize(self):
         """
