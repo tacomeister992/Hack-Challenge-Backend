@@ -51,13 +51,13 @@ class Item(db.Model):
     location = db.Column(db.String, nullable=True)
     likes = db.Column(db.Integer, nullable=False)  # likes to help with popular sorting, need association table to make sure a user can only like something once
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
-    end_date = db.Column(db.DateTime(timezone=True),
+    end_date = db.Column(db.DateTime(timezone=True), # prob don't need anymore--only one date
                          nullable=True)  # null if no end date, need to find a way to do recurring events if have time, but don't really need
     
     note = db.Column(db.String, nullable=False)
     # notes = db.relationship("Note", cascade="delete")
     photo = db.Column(db.String, nullable=False) # one to one
-    categories = db.Column(db.Boolean, nullable=False) # True if Experience, False if Location
+    is_experience = db.Column(db.Boolean, nullable=False) # True if Experience, False if Location
     # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
     def __init__(self, **kwargs):
