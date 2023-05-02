@@ -25,16 +25,10 @@ S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 S3_BASE_URL = f"https://{S3_BUCKET_NAME}.s3.us.east-1.amazonaws.com"
 
 association_table = db.Table(
-    "association2", db.metadata,
+    "association", db.metadata,
     db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
     db.Column("user_id", db.Integer, db.ForeignKey("users.id"))
 )
-
-# association_table2 = db.Table(
-#     "association2", db.metadata,
-#     db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
-#     db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
-# )
 
 
 # Models
@@ -45,31 +39,27 @@ class Item(db.Model):
 
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"),
-                        nullable=False)  # maybe make many-to-many to add multiple users to an item, i.e. users, if we have time
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     name = db.Column(db.String, nullable=False)
     location = db.Column(db.String, nullable=True)
-    likes = db.Column(db.Integer, nullable=False)  # likes to help with popular sorting, need association table to make sure a user can only like something once
-    start_date = db.Column(db.DateTime(timezone=True), nullable=False)
-    end_date = db.Column(db.DateTime(timezone=True), # prob don't need anymore--only one date
-                         nullable=True)  # null if no end date, need to find a way to do recurring events if have time, but don't really need
-    
+    likes = db.Column(db.Integer, nullable=False)
+    liked_by = db.relationship('User', secondary=association_table, back_populates='liked_items')
+    date = db.Column(db.DateTime(timezone=True), nullable=False)
     note = db.Column(db.String, nullable=False)
-    # notes = db.relationship("Note", cascade="delete")
-    photo = db.Column(db.String, nullable=False) # one to one
-    is_experience = db.Column(db.Boolean, nullable=False) # True if Experience, False if Location
+    photo = db.Column(db.String, nullable=False)  # one to one
+    is_experience = db.Column(db.Boolean, nullable=False)  # True if Experience, False if Location
     # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
     def __init__(self, **kwargs):
         self.user_id = kwargs.get("user_id")
+        self.name = kwargs.get("name")
+        self.location = kwargs.get('location')
         self.likes = 0
-        self.name = kwargs.get("name", "")
-        start = kwargs.get("start_date")
-        end = kwargs.get("end_date")
-
-        self.start_date = datetime.datetime.strptime(start, '%m/%d/%y')
-        if end:
-            self.end_date = datetime.datetime.strptime(end, '%m/%d/%y')
+        date = kwargs.get("date")
+        self.date = datetime.datetime.strptime(date, '%m/%d/%y')
+        self.note = kwargs.get('note')
+        self.photo = kwargs.get('photo')
+        self.is_experience = kwargs.get('is_experience')
 
     def serialize(self):
         """
@@ -77,89 +67,13 @@ class Item(db.Model):
         """
         return {
             "id": self.id,
-            "user_id": self.user_id,
+            "user": User.query.filter_by(id=self.user_id).first().email,
             "name": self.name,
             "likes": self.likes,
-            "dates": f"{self.start_date} - {self.end_date}",
-            "notes": self.note,
+            "date": self.date.strftime('%m/%d/%Y'),
+            "note": self.note,
             "photo": self.photo
         }
-
-    # don't need anymore
-    def simple_serialize(self):
-        """
-        Serialize an instance of Item without categories or photos
-        """
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "name": self.name,
-            "likes": self.likes,
-            "dates": f"{self.start_date} - {self.end_date}",
-            "notes": self.note
-        }
-
-
-# maybe don't need, only singular note field in item
-class Note(db.Model):
-    """
-    Model for note
-    """
-    __tablename__ = "notes"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    content = db.Column(db.String, nullable=False)
-    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
-
-    def __init__(self, **kwargs):
-        self.content = kwargs.get("content", "")
-        self.item_id = kwargs.get("item_id")
-
-    def serialize(self):
-        """
-        Serialize an instance of Note
-        """
-        return {
-            "id": self.id,
-            "content": self.content,
-            "item_id": self.item_id
-        }
-
-
-# prob don't need any more--only two catergories are Experience and Location
-# class Category(db.Model):
-#     """
-#     Model for category
-#     """
-#     __tablename__ = "categories"
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     name = db.Column(db.String, nullable=False)
-#     type = db.Column(db.String, nullable=False)
-#     items = db.relationship("Item", secondary=association_table, back_populates='categories')
-
-#     def __init__(self, **kwargs):
-#         self.name = kwargs.get("name", "")
-#         self.type = kwargs.get("type", "")
-
-#     def serialize(self):
-#         """
-#         Serialize an instance of Catergory
-#         """
-#         return {
-#             "id": self.id,
-#             "name": self.name,
-#             "type": self.type,
-#             "items": [i.simple_serialize() for i in self.items]
-#         }
-
-#     def simple_serialize(self):
-#         """
-#         Serialize an instance of Catergory without items
-#         """
-#         return {
-#             "id": self.id,
-#             "name": self.name,
-#             "type": self.type
-#         }
 
 
 class User(db.Model):
@@ -176,8 +90,7 @@ class User(db.Model):
     update_token = db.Column(db.String, nullable=False, unique=True)
 
     items = db.relationship("Item", cascade="delete")
-    liked_items = db.relationship("Item", secondary=association_table)
-    # add liked_items field for making sure only like once
+    liked_items = db.relationship("Item", secondary=association_table, back_populates='liked_by')
 
     def __init__(self, **kwargs):
         """
@@ -185,19 +98,8 @@ class User(db.Model):
         """
         self.email = kwargs.get("email")
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"),
-                                             bcrypt.gensalt(rounds=13)) 
+                                             bcrypt.gensalt(rounds=13))
         self.renew_session()
-
-    # not sure if we should serialize username/password but I'm guessing prob not for security reasons
-    def serialize(self):
-        """
-        Serialize and instance of User
-        """
-        return {
-            "id": self.id,
-            "items": [i.serialize() for i in self.items],
-            "liked_items": [l.serialize() for l in self.liked_items]
-        }
 
     def _urlsafe_base_64(self):
         """
@@ -214,7 +116,7 @@ class User(db.Model):
         """
         self.session_token = self._urlsafe_base_64()
         self.session_expiration = datetime.datetime.now() + datetime.timedelta(
-            days=1) 
+            days=1)
         self.update_token = self._urlsafe_base_64()
 
     def verify_password(self, password):
@@ -333,3 +235,66 @@ class Photo(db.Model):
 # User -> integrate into app, add poster field in item
 # Photo
 # look up crontab/cronjob
+
+
+''' maybe don't need, only singular note field in item
+class Note(db.Model):
+    """
+    Model for note
+    """
+    __tablename__ = "notes"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    content = db.Column(db.String, nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
+
+    def __init__(self, **kwargs):
+        self.content = kwargs.get("content", "")
+        self.item_id = kwargs.get("item_id")
+
+    def serialize(self):
+        """
+        Serialize an instance of Note
+        """
+        return {
+            "id": self.id,
+            "content": self.content,
+            "item_id": self.item_id
+        }
+'''
+
+
+# prob don't need any more--only two catergories are Experience and Location
+# class Category(db.Model):
+#     """
+#     Model for category
+#     """
+#     __tablename__ = "categories"
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     name = db.Column(db.String, nullable=False)
+#     type = db.Column(db.String, nullable=False)
+#     items = db.relationship("Item", secondary=association_table, back_populates='categories')
+
+#     def __init__(self, **kwargs):
+#         self.name = kwargs.get("name", "")
+#         self.type = kwargs.get("type", "")
+
+#     def serialize(self):
+#         """
+#         Serialize an instance of Catergory
+#         """
+#         return {
+#             "id": self.id,
+#             "name": self.name,
+#             "type": self.type,
+#             "items": [i.simple_serialize() for i in self.items]
+#         }
+
+#     def simple_serialize(self):
+#         """
+#         Serialize an instance of Catergory without items
+#         """
+#         return {
+#             "id": self.id,
+#             "name": self.name,
+#             "type": self.type
+#         }

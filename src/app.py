@@ -2,8 +2,6 @@ from db import db
 from db import User
 from db import Photo
 from db import Item
-from db import Note
-from db import Category
 
 import users_dao
 
@@ -154,9 +152,8 @@ def get_items_of_user():
     if user is None or not user.verify_session_token(session_token):
         return failure_response('Invalid session', 401)
 
-    items = user.serialize()
-    del items['id']
-    return success_response(items)
+    items = [i.serialize() for i in user.items]
+    return success_response({'items': items})
 
 
 @app.route('/user/items/', methods=['POST'])
@@ -174,10 +171,17 @@ def create_item():
 
     body = json.loads(request.data)
     name = body.get('name')
-    start_date = body.get('start_date')
-    end_date = body.get('end_date')
+    location = body.get('location')
+    date = body.get('date')
+    note = body.get('note')
+    photo = body.get('photo')
+    is_experience = body.get('is_experience')
 
-    item = Item(user_id=user.id, name=name, start_date=start_date, end_date=end_date)
+    if not name or not location or not date or not note or not photo or is_experience is None:
+        return failure_response('Invalid request body, something is missing', 400)
+
+    item = Item(user_id=user.id, name=name, location=location, date=date,
+                note=note, photo=photo, is_experience=is_experience)
     db.session.add(item)
     db.session.commit()
 
@@ -192,11 +196,6 @@ def like_item(item_id):
     pass
     # TODO - How should we implement this so that a user can only like an item once?
 
-
-# Authentication routes (ie. sign up/log in)
-# Get items for user with id=1 (GET /items/1/)
-# Add item for user with id=1 (GET /items/1/)
-#
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
