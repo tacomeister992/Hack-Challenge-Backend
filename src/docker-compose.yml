@@ -2,6 +2,9 @@ version: "3"
 
 services:
   demo:
-    image:
+    image: zroitman/bucket-list
+    volumes:
+      - /home/zar7/bucket.db:/usr/app/instance/bucket.db
+    env_file: .env
     ports:
-      - "8000:8000"
+      - "80:8000"
