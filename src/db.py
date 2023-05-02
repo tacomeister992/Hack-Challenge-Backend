@@ -317,10 +317,10 @@ class Photo(db.Model):
             img_temploc = f"{BASEDIR}/{img_filename}"
             img.save(img_temploc)
 
-            s3_client = boto.client("s3")
+            s3_client = boto3.client("s3")
             s3_client.upload_file(img_temploc, S3_BUCKET_NAME, img_filename)
 
-            s3_resource = boto.resource("s3")
+            s3_resource = boto3.resource("s3")
             object_acl = s3_resource.OcjectAc(S3_BUCKET_NAME, img_filename)
             object_acl.put(ACL="public-read")
 
