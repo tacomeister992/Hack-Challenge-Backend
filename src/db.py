@@ -5,7 +5,7 @@ import hashlib
 import os
 
 import base64
-# import boto
+import boto3
 import io
 from io import BytesIO
 from mimetypes import guess_extension, guess_type
@@ -25,16 +25,16 @@ S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 S3_BASE_URL = f"https://{S3_BUCKET_NAME}.s3.us.east-1.amazonaws.com"
 
 association_table = db.Table(
-    "association", db.Model.metadata,
-    db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
-    db.Column("category_id", db.Integer, db.ForeignKey("categories.id"))
-)
-
-association_table2 = db.Table(
     "association2", db.metadata,
     db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
-    db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"))
 )
+
+# association_table2 = db.Table(
+#     "association2", db.metadata,
+#     db.Column("item_id", db.Integer, db.ForeignKey("items.id")),
+#     db.Column("photo_id", db.Integer, db.ForeignKey("photos.id"))
+# )
 
 
 # Models
@@ -48,14 +48,16 @@ class Item(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"),
                         nullable=False)  # maybe make many-to-many to add multiple users to an item, i.e. users, if we have time
     name = db.Column(db.String, nullable=False)
-    likes = db.Column(db.Integer, nullable=False)  # likes to help with popular sorting
+    location = db.Column(db.String, nullable=True)
+    likes = db.Column(db.Integer, nullable=False)  # likes to help with popular sorting, need association table to make sure a user can only like something once
     start_date = db.Column(db.DateTime(timezone=True), nullable=False)
     end_date = db.Column(db.DateTime(timezone=True),
                          nullable=True)  # null if no end date, need to find a way to do recurring events if have time, but don't really need
-    notes = db.relationship("Note", cascade="delete")
-    photos = db.relationship("Photo", secondary=association_table2, back_populates="items")
-    categories = db.relationship("Category", secondary=association_table, back_populates='items')
-
+    
+    note = db.Column(db.String, nullable=False)
+    # notes = db.relationship("Note", cascade="delete")
+    photo = db.Column(db.String, nullable=False) # one to one
+    categories = db.Column(db.Boolean, nullable=False) # True if Experience, False if Location
     # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
     def __init__(self, **kwargs):
@@ -65,9 +67,9 @@ class Item(db.Model):
         start = kwargs.get("start_date")
         end = kwargs.get("end_date")
 
-        self.start_date = datetime.datetime.strptime(start, '%m/%d/%y %H:%M:%S')
+        self.start_date = datetime.datetime.strptime(start, '%m/%d/%y')
         if end:
-            self.end_date = datetime.datetime.strptime(end, '%m/%d/%y %H:%M:%S')
+            self.end_date = datetime.datetime.strptime(end, '%m/%d/%y')
 
     def serialize(self):
         """
@@ -79,10 +81,11 @@ class Item(db.Model):
             "name": self.name,
             "likes": self.likes,
             "dates": f"{self.start_date} - {self.end_date}",
-            "notes": [n.serialize() for n in self.notes],
-            "catergories": [c.simple_serialize() for c in self.categories]
+            "notes": self.note,
+            "photo": self.photo
         }
 
+    # don't need anymore
     def simple_serialize(self):
         """
         Serialize an instance of Item without categories or photos
@@ -93,10 +96,11 @@ class Item(db.Model):
             "name": self.name,
             "likes": self.likes,
             "dates": f"{self.start_date} - {self.end_date}",
-            "notes": [n.serialize() for n in self.notes]
+            "notes": self.note
         }
 
 
+# maybe don't need, only singular note field in item
 class Note(db.Model):
     """
     Model for note
@@ -121,40 +125,41 @@ class Note(db.Model):
         }
 
 
-class Category(db.Model):
-    """
-    Model for category
-    """
-    __tablename__ = "categories"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String, nullable=False)
-    type = db.Column(db.String, nullable=False)
-    items = db.relationship("Item", secondary=association_table, back_populates='categories')
+# prob don't need any more--only two catergories are Experience and Location
+# class Category(db.Model):
+#     """
+#     Model for category
+#     """
+#     __tablename__ = "categories"
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     name = db.Column(db.String, nullable=False)
+#     type = db.Column(db.String, nullable=False)
+#     items = db.relationship("Item", secondary=association_table, back_populates='categories')
 
-    def __init__(self, **kwargs):
-        self.name = kwargs.get("name", "")
-        self.type = kwargs.get("type", "")
+#     def __init__(self, **kwargs):
+#         self.name = kwargs.get("name", "")
+#         self.type = kwargs.get("type", "")
 
-    def serialize(self):
-        """
-        Serialize an instance of Catergory
-        """
-        return {
-            "id": self.id,
-            "name": self.name,
-            "type": self.type,
-            "items": [i.simple_serialize() for i in self.items]
-        }
+#     def serialize(self):
+#         """
+#         Serialize an instance of Catergory
+#         """
+#         return {
+#             "id": self.id,
+#             "name": self.name,
+#             "type": self.type,
+#             "items": [i.simple_serialize() for i in self.items]
+#         }
 
-    def simple_serialize(self):
-        """
-        Serialize an instance of Catergory without items
-        """
-        return {
-            "id": self.id,
-            "name": self.name,
-            "type": self.type
-        }
+#     def simple_serialize(self):
+#         """
+#         Serialize an instance of Catergory without items
+#         """
+#         return {
+#             "id": self.id,
+#             "name": self.name,
+#             "type": self.type
+#         }
 
 
 class User(db.Model):
@@ -171,6 +176,8 @@ class User(db.Model):
     update_token = db.Column(db.String, nullable=False, unique=True)
 
     items = db.relationship("Item", cascade="delete")
+    liked_items = db.relationship("Item", secondary=association_table)
+    # add liked_items field for making sure only like once
 
     def __init__(self, **kwargs):
         """
@@ -178,7 +185,7 @@ class User(db.Model):
         """
         self.email = kwargs.get("email")
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"),
-                                             bcrypt.gensalt(rounds=13))  # encrypts passowrd by hashing
+                                             bcrypt.gensalt(rounds=13)) 
         self.renew_session()
 
     # not sure if we should serialize username/password but I'm guessing prob not for security reasons
@@ -188,7 +195,8 @@ class User(db.Model):
         """
         return {
             "id": self.id,
-            "items": [i.serialize() for i in self.items]
+            "items": [i.serialize() for i in self.items],
+            "liked_items": [l.serialize() for l in self.liked_items]
         }
 
     def _urlsafe_base_64(self):
@@ -206,7 +214,7 @@ class User(db.Model):
         """
         self.session_token = self._urlsafe_base_64()
         self.session_expiration = datetime.datetime.now() + datetime.timedelta(
-            days=1)  # datetime.datetime.now() gives current time, datetime.timedelta(days=1) gives length of a day
+            days=1) 
         self.update_token = self._urlsafe_base_64()
 
     def verify_password(self, password):
@@ -241,7 +249,7 @@ class Photo(db.Model):
     height = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
 
-    items = db.relationship("Item", secondary=association_table2, back_populates="photos")
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
 
     def __init__(self, **kwargs):
         self.create(kwargs.get("image_data"))
@@ -258,7 +266,8 @@ class Photo(db.Model):
             "extension": self.extension,
             "width": self.width,
             "height": self.height,
-            "created_at": self.created_at
+            "created_at": self.created_at,
+            "item_id": self.item_id
         }
 
     def create(self, image_data):
@@ -322,6 +331,5 @@ class Photo(db.Model):
 
 # Item
 # User -> integrate into app, add poster field in item
-# Category
 # Photo
 # look up crontab/cronjob
