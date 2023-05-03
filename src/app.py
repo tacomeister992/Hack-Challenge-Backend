@@ -188,6 +188,42 @@ def create_item():
     return success_response(item.serialize(), 201)
 
 
+@app.route('/user/items/<int:item_id>/', methods=['POST'])
+def update_item(item_id):
+    """
+    Endpoint for updating an item for a user
+    """
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token, 400)
+
+    user = users_dao.get_user_by_session_token(session_token)
+    if user is None or not user.verify_session_token(session_token):
+        return failure_response('Invalid session', 401)
+
+    item = Item.query.filter_by(id=item_id).first()
+    if item is None:
+        return failure_response('Item does not exist', 400)
+
+    body = json.loads(request.data)
+    name = body.get('name', item.name)
+    location = body.get('location', item.location)
+    date = body.get('date', item.date)
+    note = body.get('note', item.note)
+    photo = body.get('photo', item.photo)
+    is_experience = body.get('is_experience', item.is_experience)
+
+    item.name = name
+    item.location = location
+    item.date = date
+    item.note = note
+    item.photo = photo
+    item.is_experience = is_experience
+    db.session.commit()
+
+    return success_response(item.serialize(), 200)
+
+
 @app.route('/items/<int:item_id>/like/', methods=['POST'])
 def like_item(item_id):
     """
@@ -205,7 +241,6 @@ def like_item(item_id):
     if item is None:
         return failure_response('Item does not exist', 400)
 
-    like_msg = ''
     if user in item.liked_by:
         item.likes -= 1
         item.liked_by.remove(user)
@@ -222,10 +257,27 @@ def like_item(item_id):
 @app.route('/user/items/<int:item_id>/', methods=['POST'])
 def delete_item(item_id):
     """
-
-    :param item_id:
-    :return:
+    Endpoint for a user to delete their own item
     """
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token, 400)
+
+    user = users_dao.get_user_by_session_token(session_token)
+    if user is None or not user.verify_session_token(session_token):
+        return failure_response('Invalid session', 401)
+
+    item = Item.query.filter_by(id=item_id).first()
+    if item is None:
+        return failure_response('Item does not exist', 400)
+    if item.user_id != user.id:
+        return failure_response('User did not create the item', 401)
+
+    db.session.delete(item)
+    db.session.commit()
+
+    return success_response(item.serialize())
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
