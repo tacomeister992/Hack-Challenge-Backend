@@ -191,11 +191,41 @@ def create_item():
 @app.route('/items/<int:item_id>/like/', methods=['POST'])
 def like_item(item_id):
     """
-    Endpoint for a user liking an Item
+    Endpoint for a user liking or unliking an Item
     """
-    pass
-    # TODO - How should we implement this so that a user can only like an item once?
+    success, session_token = extract_token(request)
+    if not success:
+        return failure_response(session_token, 400)
 
+    user = users_dao.get_user_by_session_token(session_token)
+    if user is None or not user.verify_session_token(session_token):
+        return failure_response('Invalid session', 401)
+
+    item = Item.query.filter_by(id=item_id).first()
+    if item is None:
+        return failure_response('Item does not exist', 400)
+
+    like_msg = ''
+    if user in item.liked_by:
+        item.likes -= 1
+        item.liked_by.remove(user)
+        like_msg = 'liked'
+    else:
+        item.likes += 1
+        item.liked_by.append(user)
+        like_msg = 'unliked'
+
+    db.session.commit()
+    return success_response({'message': f'User has successfully {like_msg} item {item_id}'})
+
+
+@app.route('/user/items/<int:item_id>/', methods=['POST'])
+def delete_item(item_id):
+    """
+
+    :param item_id:
+    :return:
+    """
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
