@@ -259,11 +259,11 @@ def like_item(item_id):
     if user in item.liked_by:
         item.likes -= 1
         item.liked_by.remove(user)
-        like_msg = 'liked'
+        like_msg = 'unliked'
     else:
         item.likes += 1
         item.liked_by.append(user)
-        like_msg = 'unliked'
+        like_msg = 'liked'
 
     db.session.commit()
     return success_response({'message': f'User has successfully {like_msg} item {item_id}'})
@@ -275,15 +275,9 @@ def get_popular_items():
     """
     items = [i.serialize() for i in Item.query.all()]
     # I know this is not efficient but it works
-    for i in items:
-        del i["user"]
-        del i["name"]
-        del i["location"]
-        del i["date"]
-        del i["photo"]
-        del i["is_experience"]
 
-    
+    sorted_items= sorted(items, key=lambda x: x["likes"], reverse=True)
+    return success_response(sorted_items)
 
 
 
