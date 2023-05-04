@@ -186,38 +186,21 @@ def create_item():
 
     if name is None or location is None or date is None or note is None or is_experience is None:
         return failure_response('Invalid request body, something is missing', 400)
-    # if photo is None:
-    #     return failure_response("No Base64 Url", 400)
-    # elif not is_base_64(photo):
-    #     item = Item(user_id=user.id, name=name, location=location, date=date,
-    #             note=note, photo=photo, is_experience=is_experience)
-    # else:
-    item = Item(user_id=user.id, name=name, location=location, date=date,
+    if photo is None:
+        return failure_response("No Base64 Url", 400)
+    elif not base64.b64encode(base64.b64decode(photo)) == photo:
+        item = Item(user_id=user.id, name=name, location=location, date=date,
+                note=note, photo=photo, is_experience=is_experience)
+    else:
+        item = Item(user_id=user.id, name=name, location=location, date=date,
             note=note, photo=photo, is_experience=is_experience)
-        # photo = Photo(image_data=photo, item_id=item.id)
-        # db.session.add(photo)
+        photo = Photo(image_data=photo, item_id=item.id)
+        db.session.add(photo)
 
     db.session.add(item)
     db.session.commit()
 
     return success_response(item.serialize(), 201)
-
-def is_base_64(photo):
-    """
-    Checks if a string is base64
-    """
-    try:
-        if isinstance(photo, str):
-                # If there's any unicode here, an exception will be thrown and the function will return false
-                sb_bytes = bytes(photo, 'ascii')
-        elif isinstance(photo, bytes):
-                sb_bytes = photo
-        else:
-            raise ValueError("Argument must be string or bytes")
-        
-        return base64.b64encode(base64.b64decode(sb_bytes)) == sb_bytes
-    except Exception:
-        return False
 
 
 @app.route('/user/items/<int:item_id>/', methods=['POST'])
@@ -284,6 +267,24 @@ def like_item(item_id):
 
     db.session.commit()
     return success_response({'message': f'User has successfully {like_msg} item {item_id}'})
+
+@app.route("/items/popular/")
+def get_popular_items():
+    """
+    Endpoint for getting popular items
+    """
+    items = [i.serialize() for i in Item.query.all()]
+    # I know this is not efficient but it works
+    for i in items:
+        del i["user"]
+        del i["name"]
+        del i["location"]
+        del i["date"]
+        del i["photo"]
+        del i["is_experience"]
+
+    
+
 
 
 @app.route('/user/items/<int:item_id>/', methods=['POST'])
