@@ -177,12 +177,18 @@ def create_item():
     photo = body.get('photo')
     is_experience = body.get('is_experience')
 
-    if not name or not location or not date or not note or not photo or is_experience is None:
+    if not name or not location or not date or not note or is_experience is None:
         return failure_response('Invalid request body, something is missing', 400)
-
+    if photo is None:
+        return failure_response("No Base64 Url", 400)
+    
     item = Item(user_id=user.id, name=name, location=location, date=date,
                 note=note, photo=photo, is_experience=is_experience)
+    
+    photo = Photo(image_data=photo, item_id=item.id)
+
     db.session.add(item)
+    db.session.add(photo)
     db.session.commit()
 
     return success_response(item.serialize(), 201)
@@ -279,11 +285,12 @@ def delete_item(item_id):
     return success_response(item.serialize())
 
 
+# photo routes
 @app.route("/upload/", methods=["POST"])
 def upload():
     """
     Endpoint for uploading an image to AWS given its base64 form,
-    then storing/returning the URL of that image
+    then storing/returning the URL of that image if image not assigned to an item
     """
     body = json.loads(request.data)
     image_data = body.get("image_data")

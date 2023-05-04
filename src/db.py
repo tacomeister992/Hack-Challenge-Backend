@@ -153,10 +153,11 @@ class Photo(db.Model):
     height = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
 
-    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False) # -1 if not assigned to an item
 
     def __init__(self, **kwargs):
         self.create(kwargs.get("image_data"))
+        self.item_id = kwargs.get("item_id", -1)
 
     def serialize(self):
         """
