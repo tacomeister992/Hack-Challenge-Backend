@@ -279,5 +279,22 @@ def delete_item(item_id):
     return success_response(item.serialize())
 
 
+@app.route("/upload/", methods=["POST"])
+def upload():
+    """
+    Endpoint for uploading an image to AWS given its base64 form,
+    then storing/returning the URL of that image
+    """
+    body = json.loads(request.data)
+    image_data = body.get("image_data")
+    if image_data is None:
+        return failure_response("No Base64 Url")
+    
+    photo = Photo(image_data=image_data)
+    db.session.add(photo)
+    db.session.commit()
+    return success_response(photo.serialize(), 201)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

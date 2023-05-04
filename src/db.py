@@ -69,10 +69,12 @@ class Item(db.Model):
             "id": self.id,
             "user": User.query.filter_by(id=self.user_id).first().email,
             "name": self.name,
+            "location": self.location,
             "likes": self.likes,
             "date": self.date.strftime('%m/%d/%Y'),
             "note": self.note,
-            "photo": self.photo
+            "photo": self.photo,
+            "is_experience": self.is_experience
         }
 
 
@@ -156,19 +158,14 @@ class Photo(db.Model):
     def __init__(self, **kwargs):
         self.create(kwargs.get("image_data"))
 
-    # not sure if necessary
     def serialize(self):
         """
         Serialize and instance of Photo
         """
         return {
             "id": self.id,
-            "base_url": self.base_url,
-            "salt": self.salt,
-            "extension": self.extension,
-            "width": self.width,
-            "height": self.height,
-            "created_at": self.created_at,
+            "base_url": f"{self.base_url}/{self.salt}.{self.extension}",
+            "created_at": str(self.created_at),
             "item_id": self.item_id
         }
 
