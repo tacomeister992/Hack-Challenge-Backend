@@ -6,7 +6,6 @@ import os
 
 import base64
 import boto3
-import io
 from io import BytesIO
 from mimetypes import guess_extension, guess_type
 from PIL import Image
@@ -262,37 +261,39 @@ class Note(db.Model):
 
 
 # prob don't need any more--only two catergories are Experience and Location
-# class Category(db.Model):
-#     """
-#     Model for category
-#     """
-#     __tablename__ = "categories"
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     name = db.Column(db.String, nullable=False)
-#     type = db.Column(db.String, nullable=False)
-#     items = db.relationship("Item", secondary=association_table, back_populates='categories')
+'''
+class Category(db.Model):
+    """
+    Model for category
+    """
+    __tablename__ = "categories"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, nullable=False)
+    type = db.Column(db.String, nullable=False)
+    items = db.relationship("Item", secondary=association_table, back_populates='categories')
 
-#     def __init__(self, **kwargs):
-#         self.name = kwargs.get("name", "")
-#         self.type = kwargs.get("type", "")
+    def __init__(self, **kwargs):
+        self.name = kwargs.get("name", "")
+        self.type = kwargs.get("type", "")
 
-#     def serialize(self):
-#         """
-#         Serialize an instance of Catergory
-#         """
-#         return {
-#             "id": self.id,
-#             "name": self.name,
-#             "type": self.type,
-#             "items": [i.simple_serialize() for i in self.items]
-#         }
+    def serialize(self):
+        """
+        Serialize an instance of Catergory
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "items": [i.simple_serialize() for i in self.items]
+        }
 
-#     def simple_serialize(self):
-#         """
-#         Serialize an instance of Catergory without items
-#         """
-#         return {
-#             "id": self.id,
-#             "name": self.name,
-#             "type": self.type
-#         }
+    def simple_serialize(self):
+        """
+        Serialize an instance of Catergory without items
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type
+        }
+'''
