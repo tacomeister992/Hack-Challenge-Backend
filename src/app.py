@@ -9,6 +9,7 @@ from flask import Flask, request
 import json
 import os
 import datetime
+import base64
 
 app = Flask(__name__)
 db_filename = "bucket.db"
@@ -55,11 +56,13 @@ def register_account():
     body = json.loads(request.data)
     email = body.get('email')
     password = body.get('password')
+    name = body.get("name")
+    birth_year = body.get("birth_year")
 
-    if email is None or password is None:
-        return failure_response('Invalid email or password', 400)
+    if email is None or not email or not password or password is None or name is None or birth_year is None or not name or not birth_year:
+        return failure_response('Invalid email, password, name, or birthyear', 400)
 
-    created, user = users_dao.create_user(email, password)
+    created, user = users_dao.create_user(email, password, name, birth_year)
 
     if not created:
         return failure_response('User already exists', 400)
@@ -67,7 +70,9 @@ def register_account():
     return success_response({
         'session_token': user.session_token,
         'session_expiration': str(user.session_expiration),
-        'update_token': user.update_token
+        'update_token': user.update_token,
+        "name": user.name,
+        "birth_year": user.birth_year
     })
 
 
@@ -90,7 +95,9 @@ def login():
     return success_response({
         'session_token': user.session_token,
         'session_expiration': str(user.session_expiration),
-        'update_token': user.update_token
+        'update_token': user.update_token,
+        'name': user.name,
+        'birth_year': user.birth_year
     })
 
 
@@ -170,28 +177,47 @@ def create_item():
         return failure_response('Invalid session', 401)
 
     body = json.loads(request.data)
-    name = body.get('name')
-    location = body.get('location')
-    date = body.get('date')
-    note = body.get('note')
-    photo = body.get('photo')
+    name = body.get('name', "Untitled")
+    location = body.get('location', "")
+    date = body.get('date', "")
+    note = body.get('note', "")
+    photo = body.get('photo', "")
     is_experience = body.get('is_experience')
 
-    if not name or not location or not date or not note or is_experience is None:
+    if name is None or location is None or date is None or note is None or is_experience is None:
         return failure_response('Invalid request body, something is missing', 400)
-    if photo is None:
-        return failure_response("No Base64 Url", 400)
-    
+    # if photo is None:
+    #     return failure_response("No Base64 Url", 400)
+    # elif not is_base_64(photo):
+    #     item = Item(user_id=user.id, name=name, location=location, date=date,
+    #             note=note, photo=photo, is_experience=is_experience)
+    # else:
     item = Item(user_id=user.id, name=name, location=location, date=date,
-                note=note, photo=photo, is_experience=is_experience)
-    
-    photo = Photo(image_data=photo, item_id=item.id)
+            note=note, photo=photo, is_experience=is_experience)
+        # photo = Photo(image_data=photo, item_id=item.id)
+        # db.session.add(photo)
 
     db.session.add(item)
-    db.session.add(photo)
     db.session.commit()
 
     return success_response(item.serialize(), 201)
+
+def is_base_64(photo):
+    """
+    Checks if a string is base64
+    """
+    try:
+        if isinstance(photo, str):
+                # If there's any unicode here, an exception will be thrown and the function will return false
+                sb_bytes = bytes(photo, 'ascii')
+        elif isinstance(photo, bytes):
+                sb_bytes = photo
+        else:
+            raise ValueError("Argument must be string or bytes")
+        
+        return base64.b64encode(base64.b64decode(sb_bytes)) == sb_bytes
+    except Exception:
+        return False
 
 
 @app.route('/user/items/<int:item_id>/', methods=['POST'])

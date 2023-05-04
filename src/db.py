@@ -92,6 +92,8 @@ class User(db.Model):
 
     items = db.relationship("Item", cascade="delete")
     liked_items = db.relationship("Item", secondary=association_table, back_populates='liked_by')
+    name = db.Column(db.String, nullable=False)
+    birth_year = db.Column(db.Integer, nullable=False)
 
     def __init__(self, **kwargs):
         """
@@ -100,6 +102,8 @@ class User(db.Model):
         self.email = kwargs.get("email")
         self.password_digest = bcrypt.hashpw(kwargs.get("password").encode("utf8"),
                                              bcrypt.gensalt(rounds=13))
+        self.name = kwargs.get("name")
+        self.birth_year = kwargs.get("birth_year")
         self.renew_session()
 
     def _urlsafe_base_64(self):
