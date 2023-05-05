@@ -1,4 +1,5 @@
 venv
+__pycache__
 bucket.db
 Midpoint_Api_diagram.pdf
 .env
