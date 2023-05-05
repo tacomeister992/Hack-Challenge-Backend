@@ -188,9 +188,6 @@ def create_item():
         return failure_response('Invalid request body, something is missing', 400)
     if photo is None:
         return failure_response("No Base64 Url", 400)
-    # elif not base64.b64encode(base64.b64decode(photo)) == photo:
-    #     item = Item(user_id=user.id, name=name, location=location, date=date,
-    #                 note=note, photo=photo, is_experience=is_experience)
     else:
         item = Item(user_id=user.id, name=name, location=location, date=date,
                     note=note, is_experience=is_experience)
@@ -202,42 +199,6 @@ def create_item():
     db.session.commit()
 
     return success_response(item.serialize(), 201)
-
-
-@app.route('/user/items/<int:item_id>/', methods=['POST'])
-def update_item(item_id):
-    """
-    Endpoint for updating an item for a user
-    """
-    success, session_token = extract_token(request)
-    if not success:
-        return failure_response(session_token, 400)
-
-    user = users_dao.get_user_by_session_token(session_token)
-    if user is None or not user.verify_session_token(session_token):
-        return failure_response('Invalid session', 401)
-
-    item = Item.query.filter_by(id=item_id).first()
-    if item is None:
-        return failure_response('Item does not exist', 400)
-
-    body = json.loads(request.data)
-    name = body.get('name', item.name)
-    location = body.get('location', item.location)
-    date = body.get('date', item.date)
-    note = body.get('note', item.note)
-    photo = body.get('photo', item.photo)
-    is_experience = body.get('is_experience', item.is_experience)
-
-    item.name = name
-    item.location = location
-    item.date = date
-    item.note = note
-    item.photo = photo
-    item.is_experience = is_experience
-    db.session.commit()
-
-    return success_response(item.serialize(), 200)
 
 
 @app.route('/items/<int:item_id>/like/', methods=['POST'])
