@@ -44,7 +44,7 @@ class Item(db.Model):
     liked_by = db.relationship('User', secondary=association_table, back_populates='liked_items')
     date = db.Column(db.DateTime(timezone=True), nullable=False)
     note = db.Column(db.String, nullable=False)
-    photo = db.Column(db.String, nullable=False)  # one to one
+    photo = db.relationship('Photo', cascade='delete', uselist=False)  # one to one
     is_experience = db.Column(db.Boolean, nullable=False)  # True if Experience, False if Location
     # public = db.Column(db.Boolean, nullable=False), lets user set public or private items, add if have time
 
@@ -56,7 +56,6 @@ class Item(db.Model):
         date = kwargs.get("date")
         self.date = datetime.datetime.strptime(date, '%m/%d/%y')
         self.note = kwargs.get('note')
-        self.photo = kwargs.get('photo')
         self.is_experience = kwargs.get('is_experience')
 
     def serialize(self):
@@ -71,7 +70,7 @@ class Item(db.Model):
             "likes": self.likes,
             "date": self.date.strftime('%m/%d/%Y'),
             "note": self.note,
-            "photo": self.photo,
+            "photo": self.photo.serialize(),
             "is_experience": self.is_experience
         }
 
@@ -148,12 +147,12 @@ class Photo(db.Model):
     """
     __tablename__ = "photos"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    base_url = db.Column(db.String, nullable=False)
-    salt = db.Column(db.String, nullable=False)
-    extension = db.Column(db.String, nullable=False)
-    width = db.Column(db.Integer, nullable=False)
-    height = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False)
+    base_url = db.Column(db.String, nullable=True)
+    salt = db.Column(db.String, nullable=True)
+    extension = db.Column(db.String, nullable=True)
+    width = db.Column(db.Integer, nullable=True)
+    height = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=True)
 
     item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False) # -1 if not assigned to an item
 
