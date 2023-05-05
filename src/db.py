@@ -54,7 +54,7 @@ class Item(db.Model):
         self.location = kwargs.get('location')
         self.likes = 0
         date = kwargs.get("date")
-        self.date = datetime.datetime.strptime(date, '%m/%d/%y')
+        self.date = datetime.datetime.strptime(date, '%m/%d/%Y')
         self.note = kwargs.get('note')
         self.is_experience = kwargs.get('is_experience')
 
