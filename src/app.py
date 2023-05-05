@@ -276,8 +276,6 @@ def get_popular_items():
     Endpoint for getting popular items
     """
     items = [i.serialize() for i in Item.query.all()]
-    # I know this is not efficient but it works
-
     sorted_items = sorted(items, key=lambda x: x["likes"], reverse=True)
     return success_response(sorted_items)
 
