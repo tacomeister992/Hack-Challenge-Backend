@@ -181,21 +181,22 @@ def create_item():
     location = body.get('location', "")
     date = body.get('date', "")
     note = body.get('note', "")
-    photo = body.get('photo', "")
+    photo = body.get('photo')
     is_experience = body.get('is_experience')
 
     if name is None or location is None or date is None or note is None or is_experience is None:
         return failure_response('Invalid request body, something is missing', 400)
     if photo is None:
         return failure_response("No Base64 Url", 400)
-    elif not base64.b64encode(base64.b64decode(photo)) == photo:
-        item = Item(user_id=user.id, name=name, location=location, date=date,
-                note=note, photo=photo, is_experience=is_experience)
+    # elif not base64.b64encode(base64.b64decode(photo)) == photo:
+    #     item = Item(user_id=user.id, name=name, location=location, date=date,
+    #                 note=note, photo=photo, is_experience=is_experience)
     else:
         item = Item(user_id=user.id, name=name, location=location, date=date,
-            note=note, photo=photo, is_experience=is_experience)
+                    note=note, is_experience=is_experience)
         photo = Photo(image_data=photo, item_id=item.id)
         db.session.add(photo)
+        item.photo = photo
 
     db.session.add(item)
     db.session.commit()
@@ -268,6 +269,7 @@ def like_item(item_id):
     db.session.commit()
     return success_response({'message': f'User has successfully {like_msg} item {item_id}'})
 
+
 @app.route("/items/popular/")
 def get_popular_items():
     """
@@ -276,9 +278,8 @@ def get_popular_items():
     items = [i.serialize() for i in Item.query.all()]
     # I know this is not efficient but it works
 
-    sorted_items= sorted(items, key=lambda x: x["likes"], reverse=True)
+    sorted_items = sorted(items, key=lambda x: x["likes"], reverse=True)
     return success_response(sorted_items)
-
 
 
 @app.route('/user/items/<int:item_id>/', methods=['POST'])
@@ -317,7 +318,7 @@ def upload():
     image_data = body.get("image_data")
     if image_data is None:
         return failure_response("No Base64 Url")
-    
+
     photo = Photo(image_data=image_data)
     db.session.add(photo)
     db.session.commit()
