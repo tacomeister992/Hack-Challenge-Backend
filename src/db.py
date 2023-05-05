@@ -20,7 +20,7 @@ db = SQLAlchemy()
 EXTENSIONS = ["png", "gif", "jpg", "jpeg"]
 BASEDIR = os.getcwd()
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
-S3_BASE_URL = f"https://{S3_BUCKET_NAME}.s3.us.east-1.amazonaws.com"
+S3_BASE_URL = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com"
 
 association_table = db.Table(
     "association", db.metadata,
@@ -54,7 +54,7 @@ class Item(db.Model):
         self.location = kwargs.get('location')
         self.likes = 0
         date = kwargs.get("date")
-        self.date = datetime.datetime.strptime(date, '%m/%d/%Y')
+        self.date = datetime.datetime.strptime(date, '%m/%d/%y')
         self.note = kwargs.get('note')
         self.is_experience = kwargs.get('is_experience')
 
@@ -178,57 +178,55 @@ class Photo(db.Model):
         2. Generates a random string for the image filename
         3. Decodes the image and attempts to upload it to AWS
         """
+        # try:
+        ext = guess_extension(guess_type(image_data)[0])[1:]
 
-        try:
-            ext = guess_extension(guess_type(image_data))[0][1:]
+        if ext not in EXTENSIONS:
+            raise Exception(f"Extension {ext} not supported")
 
-            if ext not in EXTENSIONS:
-                raise Exception(f"Extension {ext} not supported")
-
-            salt = "".join(
-                random.SystemRandom().choice(
-                    string.ascii_uppercase + string.digits
-                )
-                for _ in range(16)
+        salt = "".join(
+            random.SystemRandom().choice(
+                string.ascii_uppercase + string.digits
             )
+            for _ in range(16)
+        )
 
-            img_str = re.sub("^data:image/.+;base64,", "", image_data)
-            img_data = base64.b64decode(img_str)
-            img = Image.open(BytesIO(img_data))
+        img_str = re.sub("^data:image/.+;base64,", "", image_data)
+        img_data = base64.b64decode(img_str)
+        img = Image.open(BytesIO(img_data))
 
-            self.base_url = S3_BASE_URL
-            self.salt = salt
-            self.extension = ext
-            self.width = img.width
-            self.height = img.height
-            self.created_at = datetime.datetime.now()
+        self.base_url = S3_BASE_URL
+        self.salt = salt
+        self.extension = ext
+        self.width = img.width
+        self.height = img.height
+        self.created_at = datetime.datetime.now()
 
-            img_filename = f"{self.salt}.{self.extension}"
-            self.upload(img, img_filename)
-
-        except Exception as e:
-            print(f"Error while creating image: {e}")
+        img_filename = f"{self.salt}.{self.extension}"
+        self.upload(img, img_filename)
+        #
+        # except Exception as e:
+        #     print(f"Error while creating image: {e}")
 
     def upload(self, img, img_filename):
         """
         Attempt to upload the image into bucket
         """
+        # try:
+        img_temploc = f"{BASEDIR}/{img_filename}"
+        img.save(img_temploc)
 
-        try:
-            img_temploc = f"{BASEDIR}/{img_filename}"
-            img.save(img_temploc)
+        s3_client = boto3.client("s3")
+        s3_client.upload_file(img_temploc, S3_BUCKET_NAME, img_filename)
 
-            s3_client = boto3.client("s3")
-            s3_client.upload_file(img_temploc, S3_BUCKET_NAME, img_filename)
+        s3_resource = boto3.resource("s3")
+        object_acl = s3_resource.ObjectAcl(S3_BUCKET_NAME, img_filename)
+        object_acl.put(ACL="public-read")
 
-            s3_resource = boto3.resource("s3")
-            object_acl = s3_resource.OcjectAc(S3_BUCKET_NAME, img_filename)
-            object_acl.put(ACL="public-read")
+        os.remove(img_temploc)
 
-            os.remove(img_temploc)
-
-        except Exception as e:
-            print(f"Error while uploading image: {e}")
+        # except Exception as e:
+        #     print(f"Error while uploading image: {e}")
 
 # Item
 # User -> integrate into app, add poster field in item
